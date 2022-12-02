@@ -1,7 +1,7 @@
 import clingo
 import time
 import itertools
-from . util import format_rule, prog_size, format_prog, flatten, reduce_prog, prog_is_recursive, rule_size, rule_is_recursive, order_rule
+from . util import format_rule, order_prog, prog_size, format_prog, flatten, reduce_prog, prog_is_recursive, rule_size, rule_is_recursive, order_rule
 
 # for when we have a complete solution
 # same as above but no weak constraint over examples covered
@@ -44,6 +44,7 @@ class Combiner:
 
         self.solution_found = False
         self.best_prog = None
+        self.best_score = 0
         self.num_covered = 0
         self.max_size = None
 
@@ -141,7 +142,8 @@ class Combiner:
             # this encoding has a hard constraint to ensure the program is complete
             encoding.add(FIND_SUBSET_PROG2)
             # add size constraint to only find programs smaller than the best one so far
-            encoding.add(':- #sum{K,R : rule(R), size(R,K)} >= ' + f'{self.max_size}.')
+            if not self.settings.specified:
+                encoding.add(':- #sum{K,R : rule(R), size(R,K)} >= ' + f'{self.max_size}.')
         else:
             # this encoding has a soft constraint to cover as many positive examples as possible
             encoding.add(FIND_SUBSET_PROG1)
@@ -193,13 +195,27 @@ class Combiner:
 
     def update_best_prog(self, prog, pos_covered):
         self.update_prog_index(prog, pos_covered)
+        # self.settings.logger.info("111")
+        # for rule in order_prog(prog):
+        #     self.settings.logger.info(format_rule(order_rule(rule)))
+        prog2 = prog
         new_solution, fn = self.select_solution(prog)
 
+        # for rule in order_prog(new_solution):
+        #     self.settings.logger.info(format_rule(order_rule(rule)))
+        # self.settings.logger.info("222")
         # if there is no new better solution, do nothing
-        if len(new_solution) == 0:
+        new_score = self.tester.test_score(prog2)
+        # self.settings.logger.info(f'{new_score}')
+        if len(new_solution) == 0 and new_score < self.best_score:
             return False
-
+        
         new_solution = reduce_prog(new_solution)
+        if new_score > self.best_score:
+            new_solution = prog
+        # if self.tester.test_score(new_solution) == 0:
+        #     return False
+        self.best_score=new_score
         self.settings.solution = new_solution
         size = prog_size(new_solution)
 

@@ -35,6 +35,20 @@ class Tester():
 
         return pos, neg
 
+    def get_facts(self):
+        ret = set()
+
+        ret = self.query('findall(X,fact(X),Xs)', 'Xs')
+
+        return ret
+
+    def get_rules(self):
+        ret = set()
+
+        ret = self.query('findall(X,rule(X),Xs)', 'Xs')
+
+        return ret
+
     def __init__(self, settings):
         self.settings = settings
         self.prolog = Prolog()
@@ -42,8 +56,9 @@ class Tester():
         bk_pl_path = self.settings.bk_file
         exs_pl_path = self.settings.ex_file
         test_pl_path = pkg_resources.resource_filename(__name__, "lp/test.pl")
+        extra_pl_path = pkg_resources.resource_filename(__name__, "lp/extra.pl")
 
-        for x in [exs_pl_path, bk_pl_path, test_pl_path]:
+        for x in [exs_pl_path, bk_pl_path, test_pl_path, extra_pl_path]:
             if os.name == 'nt': # if on Windows, SWI requires escaped directory separators
                 x = x.replace('\\', '\\\\')
             self.prolog.consult(x)
@@ -83,6 +98,31 @@ class Tester():
             if len(self.neg_index):
                 inconsistent = len(list(self.prolog.query("inconsistent"))) > 0
         return pos_covered, inconsistent
+
+    def temp_func(self, prog):
+        with self.using(prog):
+            tmp = list(self.prolog.query('eval_head(grandparent(ann,amelia),X)'))
+            # tmp = tester.query('clause(x(a),X)','X')
+            print("-------------------\n")
+            print(tmp)
+            tmp = list(self.prolog.query('eval_head(grandparent(steve,amelia),X)'))
+            print(tmp)
+            tmp = list(self.prolog.query('eval_head(grandparent(ann,spongebob),X)'))
+            print(tmp)
+            tmp = list(self.prolog.query('eval_head(grandparent(steve,spongebob),X)'))
+            print(tmp)
+            tmp = list(self.prolog.query('eval_head(grandparent(linda,amelia),X)'))
+            print(tmp)
+            
+
+    def test_score(self, prog):
+        # print("SCORE")
+        # for rule in order_prog(prog):
+        #     self.settings.logger.info(format_rule(order_rule(rule)))
+        with self.using(prog):
+            tmp = list(self.prolog.query('teval_all(Vs)'))
+            # print(tmp[0]['Vs'])
+            return tmp[0]['Vs']
 
     def is_inconsistent(self, prog):
         if len(self.neg_index) == 0:

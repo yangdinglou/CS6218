@@ -41,6 +41,7 @@ def parse_args():
     # parser.add_argument('--cd', default=False, action='store_true', help='context-dependent')
     # parser.add_argument('--hspace', type=int, default=-1, help='Show the full hypothesis space')
     parser.add_argument('--functional-test', default=False, action='store_true', help='Run functional test')
+    parser.add_argument('--specified', default=False, action='store_true', help='Specified version')
     # parser.add_argument('--clingo-args', type=str, default=CLINGO_ARGS, help='Arguments to pass to Clingo')
     parser.add_argument('--ex-file', type=str, default='', help='Filename for the examples')
     parser.add_argument('--bk-file', type=str, default='', help='Filename for the background knowledge')
@@ -235,7 +236,7 @@ def flatten(xs):
     return [item for sublist in xs for item in sublist]
 
 class Settings:
-    def __init__(self, kbpath=False, info=True, debug=False, show_stats=False, bkcons=False, max_literals=MAX_LITERALS, timeout=TIMEOUT, quiet=False, eval_timeout=EVAL_TIMEOUT, max_examples=MAX_EXAMPLES, max_body=MAX_BODY, max_rules=MAX_RULES, max_vars=MAX_VARS, functional_test=False):
+    def __init__(self, kbpath=False, info=True, debug=False, show_stats=False, bkcons=False, max_literals=MAX_LITERALS, timeout=TIMEOUT, quiet=False, eval_timeout=EVAL_TIMEOUT, max_examples=MAX_EXAMPLES, max_body=MAX_BODY, max_rules=MAX_RULES, max_vars=MAX_VARS, functional_test=False, specified=False):
 
         if kbpath == False:
             args = parse_args()
@@ -253,7 +254,9 @@ class Settings:
             max_vars = args.max_vars
             max_rules = args.max_rules
             functional_test = args.functional_test
+            specified = args.specified
 
+        # logging.basicConfig(filename='example.log',filemode='w',level=logging.DEBUG)
         self.logger = logging.getLogger("popper")
 
         if quiet:
@@ -275,6 +278,7 @@ class Settings:
         self.max_literals = max_literals
         # self.clingo_args = [] if not args.clingo_args else args.clingo_args.split(' ')
         self.functional_test = functional_test
+        self.specified = specified
         self.timeout = timeout
         self.eval_timeout = eval_timeout
         self.max_examples = max_examples

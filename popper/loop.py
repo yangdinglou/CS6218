@@ -58,6 +58,7 @@ def popper(settings):
     combiner = Combiner(settings, tester)
     generator = Generator(settings, grounder)
     pos = settings.pos
+    neg = settings.neg
 
     success_sets = {}
     last_size = None
@@ -77,6 +78,7 @@ def popper(settings):
             with settings.stats.duration('generate'):
                 model = next(handle, None)
                 if model is None:
+                    print("END!")
                     break
                 atoms = model.symbols(shown = True)
                 prog, rule_ordering = generator.parse_model(atoms)
@@ -113,10 +115,12 @@ def popper(settings):
                         subprog = frozenset([rule])
                         # TODO: ADD CACHING IF THIS STEP BECOMES TOO EXPENSIVE
                         if tester.is_inconsistent(subprog):
+                            settings.logger.debug("NEW_CONS118")
                             new_cons.add(generator.build_generalisation_constraint(subprog))
             else:
                 # if consistent, prune specialisations
-                add_spec = True
+                if not settings.specified:
+                    add_spec = True
 
             # if consistent and partially complete test whether functional
             if not inconsistent and settings.functional_test and len(pos_covered) > 0 and tester.is_non_functional(prog):
@@ -132,7 +136,7 @@ def popper(settings):
 
             # check whether subsumed by an already seen program
             subsumed = False
-            if len(pos_covered) > 0 and not prog_is_recursive(prog):
+            if len(pos_covered) > 0 and not prog_is_recursive(prog) and not settings.specified:
                 subsumed = pos_covered in success_sets or any(pos_covered.issubset(xs) for xs in success_sets)
                 # if so, prune specialisations
                 if subsumed:
@@ -161,20 +165,24 @@ def popper(settings):
 
                 if combiner.solution_found:
                     for x in seen_covers_only_one_gen:
+                        settings.logger.debug("NEW_CONS167")
                         new_cons.add(generator.build_generalisation_constraint(x))
                     seen_covers_only_one_gen = set()
                     for x in seen_covers_only_one_spec:
+                        settings.logger.debug("NEW_CONS171")
                         new_cons.add(generator.build_specialisation_constraint(x))
                     seen_covers_only_one_spec = set()
 
                     if len(combiner.best_prog) <= 2:
                         for x in seen_incomplete_gen:
+                            settings.logger.debug("NEW_CONS118")
                             new_cons.add(generator.build_generalisation_constraint(x))
                         for x in seen_incomplete_spec:
+                            settings.logger.debug("NEW_CONS180")
+                            settings.logger
                             new_cons.add(generator.build_specialisation_constraint(x))
                         seen_incomplete_gen = set()
                         seen_incomplete_spec = set()
-
 
             # if consistent, covers at least one example, and is not subsumed, try to find a solution
             if not inconsistent and not subsumed and len(pos_covered) > 0:
@@ -185,7 +193,7 @@ def popper(settings):
                     new_solution_found = combiner.update_best_prog(prog, pos_covered)
 
                 # if we find a new solution, update the maximum program size
-                if new_solution_found:
+                if new_solution_found and not settings.specified:
                     for i in range(combiner.max_size, settings.max_literals+1):
                         size_con = [(atom_to_symbol("size", (i,)), True)]
                         model.context.add_nogood(size_con)
@@ -193,13 +201,31 @@ def popper(settings):
 
             # if it covers all examples, stop
             if not inconsistent and len(pos_covered) == len(pos):
-                return
+                if len(neg) == 0:
+                    # tester.temp_func(prog)
+                    score = tester.test_score(prog)
+                    # print("Score")
+                    # print(score)
+                    # print(len(tester.get_facts()))
+                    if score >= len(tester.get_facts()):
+                        # with settings.stats.duration('combine'):
+                        #     new_solution_found = combiner.update_best_prog(prog, pos_covered)
+                        return
+                    else:
+                        add_gen = True
+                else :
+                    return
+
 
             if add_spec:
+                
+                settings.logger.debug("NEW_CONS219")
                 new_cons.add(generator.build_specialisation_constraint(prog, rule_ordering))
             if add_gen:
+                settings.logger.debug("NEW_CONS222")
                 new_cons.add(generator.build_generalisation_constraint(prog, rule_ordering))
-
+            
+            
             constrain(settings, generator, new_cons, model)
 
 def learn_solution(settings):
